@@ -12,7 +12,6 @@ const resetDb = async (): Promise<any> => {
     const promises = [];
 
     const sql = await fs.readFile('src/app/resources/create_database.sql', 'utf8');
-    Logger.info("Resetting Database...");
     promises.push(getPool().query(sql));  // sync call to recreate DB
 
     const files = await fs.readdir(imageDirectory);

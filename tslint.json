@@ -5,6 +5,7 @@
   ],
   "jsRules": {},
   "rules": {
+    "variable-name": ["snake-case"],
     "trailing-comma": [ false ]
   },
   "rulesDirectory": []
