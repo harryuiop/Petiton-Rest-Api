@@ -105,4 +105,5 @@ const removeUserAuthToken = async (token: string): Promise<any> => {
     return rows;
 }
 
-export { removeUserAuthToken, updatePassword, registerUser, getOne, getHashedPasswordFromEmail, checkIfEmailExists, alterUserWithoutPassword, getPasswordFromId, updateUserToken, getUserIdAndTokenFromEmail, getUserAuthToken }
+export { removeUserAuthToken, updatePassword, registerUser, getOne, getHashedPasswordFromEmail,
+    checkIfEmailExists, alterUserWithoutPassword, getPasswordFromId, updateUserToken, getUserIdAndTokenFromEmail, getUserAuthToken }
