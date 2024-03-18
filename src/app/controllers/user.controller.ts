@@ -114,6 +114,8 @@ const logout = async (req: Request, res: Response): Promise<void> => {
     try{
         const authToken = req.header('X-Authorization');
 
+        // Todo: auth token already removed edge case ( exists in another user )
+
         // Check if a user is logged in
         if (authToken === undefined) {
             res.statusMessage = `Unauthorized. Cannot log out if you are not authenticated`;
