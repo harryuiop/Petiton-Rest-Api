@@ -2,8 +2,12 @@ import {Request, Response} from "express";
 import Logger from '../../config/logger';
 import {validate} from "../services/validate";
 import * as schemas from '../resources/schemas.json'
-import {getAllPetitionFromSearchUnfilterd,isUserSupporterOfPetition} from "../models/petition.model";
+import {getAllPetitionFromSearchUnfilterd,getFullPetitionSupportTable} from "../models/petition.model";
 
+interface SupporterPetition {
+    user_id: number;
+    petition_id: number;
+}
 
 const getAllPetitions = async (req: Request, res: Response): Promise<void> => {
     try{
@@ -12,19 +16,48 @@ const getAllPetitions = async (req: Request, res: Response): Promise<void> => {
             schemas.petition_search,
             req.query);
 
+
+        const sortByTypes = ["ALPHABETICAL_ASC", "ALPHABETICAL_DESC", "COST_ASC", "COST_DESC","CREATED_DESC"]
+
         // Retrieve all the parameters
         const parameters = req.query as searchParameters;
+
+        if (parameters.q === "") {
+            res.statusMessage = "test"
+            res.status(400).send();
+            return;
+        }
+
+        if (parameters.sortBy !== undefined && !(sortByTypes.includes(parameters.sortBy))) {
+            res.statusMessage = "test"
+            res.status(400).send();
+            return;
+        }
+
+
 
         // Retrieve the entire table
         const receiveEntireTable = await getAllPetitionFromSearchUnfilterd();
 
+        // Retrieve the supporters table
+        const recieveEnitreSupporterPetition = await getFullPetitionSupportTable();
+
+        let petitionsSupportedByUser: number[] = []
+
+        if (parameters.supporterId !== undefined) {
+            petitionsSupportedByUser = recieveEnitreSupporterPetition.filter((supporter: any) => {
+                return supporter.user_id.toString() === parameters.supporterId;
+            }).map((supporter: any) => supporter.petition_id)
+        }
+
         // Filter from the query parameters
         let filteredTable = receiveEntireTable.filter((query: any) => {
+
             if (parameters.q !== undefined &&
                 !((query.title.toUpperCase().includes((parameters.q as string).toUpperCase() as string)) || query.description.toUpperCase().includes((parameters.q as string).toUpperCase()))) {
                 return false;
             }
-            if (parameters.categoryIds !== undefined && (query.categoryId.toString().includes(parameters.categoryIds))) {
+            if (parameters.categoryIds !== undefined && !(parameters.categoryIds.includes(query.categoryId.toString()))) {
                 return false;
             }
             if (parameters.supportingCost !== undefined && query.supportingCost > parseInt(parameters.supportingCost, 10)) {
@@ -33,7 +66,8 @@ const getAllPetitions = async (req: Request, res: Response): Promise<void> => {
             if (parameters.ownerId !== undefined && query.ownerId.toString() !== parameters.ownerId) {
                 return false;
             }
-            if (parameters.supporterId !== undefined && !( isUserSupporterOfPetition(parseInt(parameters.supporterId, 10), query.petitionId))) {
+            const includeMe =  petitionsSupportedByUser.includes(query.petitionId)
+            if (parameters.supporterId !== undefined && !includeMe) {
                 return false;
             }
             return true;

@@ -45,18 +45,17 @@ LEFT JOIN
     return rows;
 };
 
-const isUserSupporterOfPetition = async (userId: number, petitionId: number): Promise<any> => {
-    Logger.info(`Checking if user ${userId} is a support of petition ${petitionId}`);
+const getFullPetitionSupportTable = async (): Promise<any> => {
+    Logger.info(`Getting full petition supporter table`);
 
     const conn = await getPool().getConnection();
-    const query = 'SELECT id FROM supporter WHERE user_id = ? AND petition_id = ?'
-    Logger.info(`pleeeeeeeeeeeeeeeeease`);
-    const [ rows ] = await conn.query( query, [ userId, petitionId ] );
+    const query = 'SELECT user_id, petition_id FROM `supporter` ORDER BY user_id'
+    const [ rows ] = await conn.query( query );
     await conn.release();
-    return rows.length >= 1;
+    return rows;
 }
 
-export { getAllPetitionFromSearchUnfilterd, isUserSupporterOfPetition }
+export { getAllPetitionFromSearchUnfilterd, getFullPetitionSupportTable }
 
 
 
