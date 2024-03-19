@@ -2,7 +2,7 @@ import {Request, Response} from "express";
 import Logger from '../../config/logger';
 import {validate} from "../services/validate";
 import * as schemas from '../resources/schemas.json'
-import {getAllPetitionFromSearchUnfilterd} from "../models/petition.model";
+import {getAllPetitionFromSearchUnfilterd,isUserSupporterOfPetition} from "../models/petition.model";
 
 
 const getAllPetitions = async (req: Request, res: Response): Promise<void> => {
@@ -13,7 +13,7 @@ const getAllPetitions = async (req: Request, res: Response): Promise<void> => {
             req.query);
 
         // Retrieve all the parameters
-        const parameters= req.query;
+        const parameters = req.query as searchParameters;
 
         // Retrieve the entire table
         const receiveEntireTable = await getAllPetitionFromSearchUnfilterd();
@@ -27,10 +27,13 @@ const getAllPetitions = async (req: Request, res: Response): Promise<void> => {
             if (parameters.categoryIds !== undefined && (query.categoryId.toString().includes(parameters.categoryIds))) {
                 return false;
             }
+            if (parameters.supportingCost !== undefined && query.supportingCost > parseInt(parameters.supportingCost, 10)) {
+                return false;
+            }
             if (parameters.ownerId !== undefined && query.ownerId.toString() !== parameters.ownerId) {
                 return false;
             }
-            if (parameters.supporterId !== undefined && query.supporterId.toString() !== parameters.supporterId) {
+            if (parameters.supporterId !== undefined && !( isUserSupporterOfPetition(parseInt(parameters.supporterId, 10), query.petitionId))) {
                 return false;
             }
             return true;
