@@ -65,6 +65,16 @@ const checkCategoryValid = async (categoryId: number): Promise<boolean> => {
     return rows.length === 0;
 }
 
+const checkPetitionIdValid = async (petitionId: number): Promise<boolean> => {
+    Logger.info(`Checking if the petitionId is valid`);
+
+    const conn = await getPool().getConnection();
+    const query = 'SELECT id FROM petition WHERE id = ?'
+    const [ rows ] = await conn.query( query, [ petitionId ] );
+    await conn.release();
+    return rows.length === 0;
+}
+
 const checkTitleUnique = async (title: string):Promise<boolean> => {
     Logger.info(`Checking if the title in unique`);
 
@@ -118,9 +128,105 @@ const getAllTitlesOfTier = async (petitionId: number):Promise<any> => {
     return rows;
 }
 
+const getPetitionFromPetitionId = async (petitionId: number):Promise<any> => {
+    Logger.info(`Getting all the information for petition ${petitionId}`);
+
+    const conn = await getPool().getConnection();
+    const query = `
+    SELECT p.id AS petitionId,
+               p.title,
+               p.category_id AS categoryId,
+               p.owner_id AS ownerId,
+               u.first_name AS ownerFirstName,
+               u.last_name AS ownerLastName,
+               COUNT(DISTINCT s.user_id) AS numberOfSupporters,
+               p.creation_date AS creationDate,
+               p.description,
+               COALESCE(SUM(st.cost), 0) AS moneyRaised
+        FROM petition p
+        LEFT JOIN supporter s ON p.id = s.petition_id
+        LEFT JOIN user u ON p.owner_id = u.id
+        LEFT JOIN support_tier st ON p.id = st.petition_id
+        WHERE p.id = ?
+        GROUP BY p.id`;
+
+    const [ rows ] = await conn.query( query, [ petitionId ] );
+    await conn.release();
+    return rows;
+}
+
+const getSupportTiersFromPetitionId = async (petitionId: number):Promise<any> => {
+    Logger.info(`Getting all the information for support tiers for petition ${petitionId}`);
+
+    const conn = await getPool().getConnection();
+    const query = `SELECT title, description, cost, id as supportTierId FROM support_tier WHERE petition_id = ?`;
+    const [ rows ] = await conn.query( query, [ petitionId ] );
+    await conn.release();
+    return rows;
+}
+
+const getAllCategory = async ():Promise<any> => {
+    Logger.info(`Getting all categorys`);
+
+    const conn = await getPool().getConnection();
+    const query = `SELECT id as categoryId, name FROM category ORDER BY name ASC `;
+    const [ rows ] = await conn.query( query );
+    await conn.release();
+    return rows;
+}
+
+const editPetitionM = async (petitionId: number, title: string, description: string, categoryId:number):Promise<void> => {
+    Logger.info(`Updating petition ${petitionId}`);
+
+    const conn = await getPool().getConnection();
+    const query = `UPDATE petition SET title = ?, description = ?, category_id = ? WHERE id = ?`;
+    const [ rows ] = await conn.query( query, [ title, description, categoryId, petitionId ] );
+    await conn.release();
+    return;
+}
+
+const petitonAuthTable = async (petitionId: number):Promise<any> => {
+    Logger.info(`Getting petition owner's ID`);
+
+    const conn = await getPool().getConnection();
+    const query = `select user.id as userId, petition.id as petitionId, auth_token from petition, user where user.id = owner_id;`;
+    const [ rows ] = await conn.query( query, [ petitionId ] );
+    await conn.release();
+    return rows;
+}
+
+const getAllPetitionInfo = async (petitionId: number):Promise<any> => {
+    Logger.info(`Getting petition information`);
+
+    const conn = await getPool().getConnection();
+    const query = `SELECT * FROM petition WHERE id = ?`;
+    const [ rows ] = await conn.query( query, [ petitionId ] );
+    await conn.release();
+    return rows;
+}
+
+const checkAuthorized = async (token: string): Promise<boolean> => {
+    Logger.info(`Checking if request is authorized`);
+
+    const conn = await getPool().getConnection();
+    const query = `SELECT auth_token FROM user WHERE auth_token = ?`;
+    const [ rows ] = await conn.query( query, [ token ] );
+    await conn.release();
+    return rows.length > 0;
+}
 
 
-export { getAllPetitionFromSearchUnfilterd, getAllTitlesOfTier, checkTitleUnique, getFullPetitionSupportTable, createPeition, getIdFromAuthToken, createSupportTier, checkCategoryValid }
+const checkIfPetitionHasSupporter = async (petitionId: string): Promise<boolean> => {
+    Logger.info(`Checking if request is authorized`);
+
+    const conn = await getPool().getConnection();
+    const query = `SELECT COUNT(*) AS supporter_count FROM supporter WHERE petition_id = ?`;
+    const [ rows ] = await conn.query( query, [ petitionId ] );
+    await conn.release();
+    return rows[0].supporter_count > 0;
+}
+
+export { checkIfPetitionHasSupporter, checkAuthorized, getAllPetitionInfo, petitonAuthTable, editPetitionM, getAllCategory, checkPetitionIdValid, getSupportTiersFromPetitionId, getPetitionFromPetitionId, getAllPetitionFromSearchUnfilterd, getAllTitlesOfTier, checkTitleUnique, getFullPetitionSupportTable, createPeition, getIdFromAuthToken, createSupportTier, checkCategoryValid }
 
 
 

@@ -19,7 +19,7 @@ const getImage = async (req: Request, res: Response): Promise<void> => {
         const filename = await getProfileImageFileNameFromId(userId);
 
         // If user does not have an image
-        if (filename.length === 0 || userId === undefined) {
+        if (filename[0].image_filename === null || userId === undefined) {
             res.statusMessage = `No user with specified ID, or user has no image`;
             res.status(404).send();
             return;
