@@ -63,7 +63,6 @@ const setImage = async (req: Request, res: Response): Promise<void> => {
     try{
         const userId = parseInt(req.params.id, 10);
         const authToken = req.header('X-Authorization');
-        const hasProfilePhoto = false;
 
         // Check if there is a user with the given user ID
         const userDetails = await getOne(userId);
