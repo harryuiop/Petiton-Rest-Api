@@ -85,7 +85,7 @@ const checkTitleUnique = async (title: string):Promise<boolean> => {
     return rows.length === 0;
 }
 
-const createPeition = async (title: string, description: string, formattedDate: string, userId: number, categoryId: number): Promise<ResultSetHeader> => {
+const createPetition = async (title: string, description: string, formattedDate: string, userId: number, categoryId: number): Promise<ResultSetHeader> => {
     Logger.info('Creating petition in the database');
 
     const conn = await getPool().getConnection();
@@ -216,7 +216,7 @@ const checkAuthorized = async (token: string): Promise<boolean> => {
 }
 
 
-const checkIfPetitionHasSupporter = async (petitionId: string): Promise<boolean> => {
+const checkIfPetitionHasSupporter = async (petitionId: number): Promise<boolean> => {
     Logger.info(`Checking if request is authorized`);
 
     const conn = await getPool().getConnection();
@@ -226,7 +226,7 @@ const checkIfPetitionHasSupporter = async (petitionId: string): Promise<boolean>
     return rows[0].supporter_count > 0;
 }
 
-export { checkIfPetitionHasSupporter, checkAuthorized, getAllPetitionInfo, petitonAuthTable, editPetitionM, getAllCategory, checkPetitionIdValid, getSupportTiersFromPetitionId, getPetitionFromPetitionId, getAllPetitionFromSearchUnfilterd, getAllTitlesOfTier, checkTitleUnique, getFullPetitionSupportTable, createPeition, getIdFromAuthToken, createSupportTier, checkCategoryValid }
+export { checkIfPetitionHasSupporter, checkAuthorized, getAllPetitionInfo, petitonAuthTable, editPetitionM, getAllCategory, checkPetitionIdValid, getSupportTiersFromPetitionId, getPetitionFromPetitionId, getAllPetitionFromSearchUnfilterd, getAllTitlesOfTier, checkTitleUnique, getFullPetitionSupportTable, createPetition, getIdFromAuthToken, createSupportTier, checkCategoryValid }
 
 
 

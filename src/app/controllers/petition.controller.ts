@@ -5,7 +5,7 @@ import * as schemas from '../resources/schemas.json'
 import {
     checkCategoryValid,
     checkTitleUnique,
-    createPeition,
+    createPetition,
     createSupportTier,
     getAllPetitionFromSearchUnfilterd,
     getAllTitlesOfTier,
@@ -257,7 +257,7 @@ const addPetition = async (req: Request, res: Response): Promise<void> => {
         const userId = await getIdFromAuthToken(authToken);
 
         // Create the petition and return the ID its creates it within the database
-        const petitionIdReturned = await createPeition(title, description, formattedDate, parseInt(userId[0].id, 10), parseInt(categoryId, 10));
+        const petitionIdReturned = await createPetition(title, description, formattedDate, parseInt(userId[0].id, 10), parseInt(categoryId, 10));
 
         // Check the amount of support tiers attched
         if ((req.body.supportTiers).length < 1 || (req.body.supportTiers).length > 3) {
@@ -426,9 +426,9 @@ const deletePetition = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        // Check if given petition has as supports
-        if (await checkIfPetitionHasSupporter(petitionId)) {
-            res.statusMessage = `Forbidden. Can not delete a petition with one or more supporters`;
+        // Check if petition has any supporters
+        if (await checkIfPetitionHasSupporter(parseInt(petitionId, 10))) {
+            res.statusMessage = "Forbidden. Can not edit a support tier if a supporter already exists for it";
             res.status(403).send();
             return;
         }

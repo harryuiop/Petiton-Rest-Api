@@ -42,4 +42,14 @@ const removeUserProfileImage = async (id: number): Promise <void> => {
     return;
 }
 
-export {getProfileImageFileNameFromId, checkUserHasProfileImage, updateUserProfileImage, removeUserProfileImage}
+const checkTokenValid = async (token: string): Promise <boolean> => {
+    Logger.info(`Checking if token ${token}'s is valid in the database`);
+
+    const conn = await getPool().getConnection();
+    const query = 'SELECT auth_token FROM user WHERE auth_token = ?'
+    const [rows] = await conn.query(query, [token]);
+    await conn.release();
+    return rows[0].auth_token !== null;
+}
+
+export {getProfileImageFileNameFromId, checkUserHasProfileImage, updateUserProfileImage, removeUserProfileImage, checkTokenValid }

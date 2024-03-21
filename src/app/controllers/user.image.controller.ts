@@ -1,6 +1,7 @@
 import {Request, Response} from "express";
 import Logger from "../../config/logger";
 import {
+    checkTokenValid,
     checkUserHasProfileImage,
     getProfileImageFileNameFromId, removeUserProfileImage,
     updateUserProfileImage
@@ -9,18 +10,35 @@ import {getOne, getUserAuthToken} from "../models/user.model";
 import fs from 'fs';
 import mime from "mime";
 import {lookup} from "mz/dns";
+import {checkAuthorized} from "../models/petition.model";
 
 
 const getImage = async (req: Request, res: Response): Promise<void> => {
     try{
         const userId = req.params.id;
 
+        // Check userId is defined
+        if (userId === undefined) {
+            res.statusMessage = `No user with specified ID, or user has no image`;
+            res.status(404).send();
+            return;
+        }
+
+        // Check if user exists
+        const user = await getOne(parseInt(userId, 10));
+
+        if (user.length === 0) {
+            res.statusMessage = `No user with specified ID`;
+            res.status(404).send();
+            return;
+        }
+
         // Get the file name for the profile photo
         const filename = await getProfileImageFileNameFromId(userId);
 
         // If user does not have an image
-        if (filename[0].image_filename === null || userId === undefined) {
-            res.statusMessage = `No user with specified ID, or user has no image`;
+        if (filename[0].image_filename === null) {
+            res.statusMessage = `User has no image`;
             res.status(404).send();
             return;
         }
@@ -136,16 +154,19 @@ const deleteImage = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        // Check that the user trying to update data is authenticated
+        // Check that the user trying to update data is authenticated and not forbidden
         const token = await getUserAuthToken(userId);
-        if (token[0].auth_token !== authToken) {
+        if (checkTokenValid(authToken)) {
+            if (token[0].auth_token !== authToken) {
+                res.statusMessage = "Forbidden. Can not delete another user's profile photo";
+                res.status(403).send();
+                return;
+            }
+        } else {
             res.statusMessage = "User not authenticated";
             res.status(401).send();
             return;
         }
-
-        // TODO: Check user isn't trying to change another users image
-
 
         // Delete the users image out of the database
         await removeUserProfileImage(userId);
