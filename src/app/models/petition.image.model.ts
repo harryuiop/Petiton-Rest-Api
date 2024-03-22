@@ -31,5 +31,15 @@ const updateUserProfileImage = async (filename: string, id: number): Promise <an
     await conn.release();
     return rows;
 }
+const updatePetitionProfileImage = async (filename: string, id: number): Promise <any> => {
+    Logger.info(`Updating user ${id}'s profile image in the database`);
 
-export {getProfileImageFileNameFromPetitionId, checkPetitonHasProfileImage}
+    const conn = await getPool().getConnection();
+    const query = 'update petition set image_filename = ? where id = ?'
+    const [ rows ] = await conn.query( query, [ filename, id ] );
+    await conn.release();
+    return rows;
+}
+
+
+export {getProfileImageFileNameFromPetitionId, checkPetitonHasProfileImage, updatePetitionProfileImage}

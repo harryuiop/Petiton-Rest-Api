@@ -3,7 +3,7 @@ import Logger from "../../config/logger";
 import fs from 'fs';
 import mime from "mime";
 import {checkPetitionIdValid, getPetitionFromPetitionId, petitonAuthTable, checkAuthorized} from "../models/petition.model";
-import {checkPetitonHasProfileImage, getProfileImageFileNameFromPetitionId} from "../models/petition.image.model";
+import {checkPetitonHasProfileImage, getProfileImageFileNameFromPetitionId, updatePetitionProfileImage} from "../models/petition.image.model";
 import {validate} from "../services/validate";
 import * as schemas from '../resources/schemas.json'
 import {checkUserHasProfileImage, updateUserProfileImage} from "../models/user.image.model";
@@ -63,7 +63,7 @@ const setImage = async (req: Request, res: Response): Promise<void> => {
 
         // Check if there is a petition with the given user ID
         const petitionDetails = await checkPetitionIdValid(petitionId);
-        if (!petitionDetails) {
+        if (petitionDetails) {
             res.statusMessage = "Not found. No such user with ID given";
             res.status(404).send();
             return;
@@ -116,17 +116,16 @@ const setImage = async (req: Request, res: Response): Promise<void> => {
 
         fs.writeFileSync(imagePath, imageData);
 
-
         // Check if user already has a profile photo
         const checkForProfilePhoto = await checkPetitonHasProfileImage(petitionId);
         if (checkForProfilePhoto[0].image_filename === null) {
-            await updateUserProfileImage(imageFilename, petitionId);
+            await updatePetitionProfileImage(imageFilename, petitionId);
             res.statusMessage = "Create profile image";
             res.status(201).send();
             return;
         }
 
-        await updateUserProfileImage(imageFilename, petitionId);
+        await updatePetitionProfileImage(imageFilename, petitionId);
         res.statusMessage = "Updated profile image";
         res.status(200).send();
         return;

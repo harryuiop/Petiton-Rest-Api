@@ -8,7 +8,13 @@ import {
 } from "../models/petition.model";
 import {validate} from "../services/validate";
 import * as schemas from "../resources/schemas.json";
-import {checkPetitionExists, getSupportTierInfo, updateSupportTier} from "../models/supportTiers.model";
+import {
+    checkIfSupportTierHasSupporter, checkNumberOfSupportTiers,
+    checkPetitionExists, deleteSupportTiers,
+    getSupportTierInfo,
+    updateSupportTier
+} from "../models/supportTiers.model";
+import {checkSupporterTierExists} from "../models/petition.supporter.model";
 
 const addSupportTier = async (req: Request, res: Response): Promise<void> => {
     try{
@@ -191,9 +197,67 @@ const editSupportTier = async (req: Request, res: Response): Promise<void> => {
 
 const deleteSupportTier = async (req: Request, res: Response): Promise<void> => {
     try{
-        // Your code goes here
-        res.statusMessage = "Not Implemented Yet!";
-        res.status(501).send();
+        const petitionId = req.params.id;
+        const tierId = req.params.tierId;
+        const authToken = req.header('X-Authorization');
+
+        // Check petition ID  not NaN
+        if (isNaN(parseInt(petitionId, 10))) {
+            res.statusMessage = `Petition ID must be a number`;
+            res.status(400).send();
+            return;
+        }
+
+        // Check if support tier exists
+        const supportTier = await checkSupporterTierExists(parseInt(petitionId, 10), parseInt(tierId, 10));
+        if (supportTier.length === 0) {
+            res.statusMessage = `Support tier does not exist`;
+            res.status(404).send();
+            return;
+        }
+
+        // Check tier ID  not NaN
+        if (isNaN(parseInt(tierId, 10))) {
+            res.statusMessage = `Support Tier ID must be a number`;
+            res.status(400).send();
+            return;
+        }
+
+        // Check request is authorized
+        if (!(await checkAuthorized(authToken))) {
+            res.statusMessage = `Unauthorized`;
+            res.status(401).send();
+            return;
+        }
+
+        // Check the owner of the given petition
+        const petitonAuthTableR = await petitonAuthTable(parseInt(petitionId, 10));
+        const authRow = petitonAuthTableR.filter((row: any) => row.petitionId === parseInt(petitionId, 10));
+
+        // Checks the authentication token against the owner of the petitions authentication token
+        if (authToken !== authRow[0].auth_token) {
+            res.statusMessage = `Forbidden. Only the owner of a petition may change it`;
+            res.status(403).send();
+            return;
+        }
+
+        // Check if tier has any supporters
+        if (!checkIfSupportTierHasSupporter(parseInt(petitionId, 10), parseInt(tierId, 10))) {
+            res.statusMessage = `Forbidden. an not delete a support tier if a supporter already exists for it`;
+            res.status(403).send();
+            return;
+        }
+
+        // Check that the only support tier is not being deleted
+        if (await checkNumberOfSupportTiers(parseInt(petitionId, 10)) === 1) {
+            res.statusMessage = `Forbidden. Can not remove a support tier if it is the only one for a petition`;
+            res.status(403).send();
+            return;
+        }
+
+        deleteSupportTiers(parseInt(petitionId, 10), parseInt(tierId, 10));
+        res.statusMessage = "Support tier successfully deleted";
+        res.status(200).send();
         return;
     } catch (err) {
         Logger.error(err);

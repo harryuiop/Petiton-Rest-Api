@@ -15,7 +15,7 @@ import {
     getSupportTiersFromPetitionId,
     checkPetitionIdValid,
     getAllCategory,
-    editPetitionM, petitonAuthTable, getAllPetitionInfo, checkAuthorized, checkIfPetitionHasSupporter
+    editPetitionM, petitonAuthTable, getAllPetitionInfo, checkAuthorized, checkIfPetitionHasSupporter, deletePetitions
 } from "../models/petition.model";
 import {getUserAuthToken} from "../models/user.model";
 import logger from "../../config/logger";
@@ -224,10 +224,9 @@ const addPetition = async (req: Request, res: Response): Promise<void> => {
         const description = req.body.description;
         const categoryId = req.body.categoryId;
         const authToken = req.header('X-Authorization');
-        const dateTime = new Date()
 
         // Check request is authorized
-        if (authToken === undefined || await !checkAuthorized(authToken)) {
+        if (authToken === undefined || !await checkAuthorized(authToken)) {
             res.statusMessage = `Unauthorized`;
             res.status(401).send();
             return;
@@ -277,7 +276,7 @@ const addPetition = async (req: Request, res: Response): Promise<void> => {
                 res.status(400).send();
                 return;
             }
-            createSupportTier(petitionIdReturned.insertId, req.body.supportTiers[i].title, req.body.supportTiers[i].description, parseInt(req.body.supportTiers[i].cost, 10));
+            await createSupportTier(petitionIdReturned.insertId, req.body.supportTiers[i].title, req.body.supportTiers[i].description, parseInt(req.body.supportTiers[i].cost, 10));
         }
 
         res.statusMessage = "Petition and support tiers successfully created"
@@ -428,12 +427,13 @@ const deletePetition = async (req: Request, res: Response): Promise<void> => {
 
         // Check if petition has any supporters
         if (await checkIfPetitionHasSupporter(parseInt(petitionId, 10))) {
-            res.statusMessage = "Forbidden. Can not edit a support tier if a supporter already exists for it";
+            res.statusMessage = "Forbidden. Can not delete a support tier if a supporter already exists for it";
             res.status(403).send();
             return;
         }
 
-        res.statusMessage = "";
+        deletePetitions(parseInt(petitionId, 10));
+        res.statusMessage = "Support tier deleted";
         res.status(200).send();
         return;
     } catch (err) {

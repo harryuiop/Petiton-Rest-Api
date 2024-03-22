@@ -175,14 +175,14 @@ const getAllCategory = async ():Promise<any> => {
     return rows;
 }
 
-const editPetitionM = async (petitionId: number, title: string, description: string, categoryId:number):Promise<void> => {
+const editPetitionM = async (petitionId: number, title: string, description: string, categoryId:number):Promise<any> => {
     Logger.info(`Updating petition ${petitionId}`);
 
     const conn = await getPool().getConnection();
     const query = `UPDATE petition SET title = ?, description = ?, category_id = ? WHERE id = ?`;
     const [ rows ] = await conn.query( query, [ title, description, categoryId, petitionId ] );
     await conn.release();
-    return;
+    return rows;
 }
 
 const petitonAuthTable = async (petitionId: number):Promise<any> => {
@@ -226,7 +226,17 @@ const checkIfPetitionHasSupporter = async (petitionId: number): Promise<boolean>
     return rows[0].supporter_count > 0;
 }
 
-export { checkIfPetitionHasSupporter, checkAuthorized, getAllPetitionInfo, petitonAuthTable, editPetitionM, getAllCategory, checkPetitionIdValid, getSupportTiersFromPetitionId, getPetitionFromPetitionId, getAllPetitionFromSearchUnfilterd, getAllTitlesOfTier, checkTitleUnique, getFullPetitionSupportTable, createPetition, getIdFromAuthToken, createSupportTier, checkCategoryValid }
+const deletePetitions = async (petitionId: number): Promise<void> => {
+    Logger.info(`Deleting Petition ${petitionId}`);
+
+    const conn = await getPool().getConnection();
+    const query = `DELETE FROM petition WHERE id = ?`;
+    const [ rows ] = await conn.query( query, [ petitionId ] );
+    await conn.release();
+    return;
+}
+
+export { deletePetitions, checkIfPetitionHasSupporter, checkAuthorized, getAllPetitionInfo, petitonAuthTable, editPetitionM, getAllCategory, checkPetitionIdValid, getSupportTiersFromPetitionId, getPetitionFromPetitionId, getAllPetitionFromSearchUnfilterd, getAllTitlesOfTier, checkTitleUnique, getFullPetitionSupportTable, createPetition, getIdFromAuthToken, createSupportTier, checkCategoryValid }
 
 
 

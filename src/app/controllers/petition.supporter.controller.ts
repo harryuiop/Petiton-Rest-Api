@@ -73,7 +73,7 @@ const addSupporter = async (req: Request, res: Response): Promise<void> => {
         const supportTierValid = await checkSupporterTierExists(parseInt(petitionId, 10), parseInt(supportTierId, 10));
         if (supportTierValid.length === 0) {
             res.statusMessage = `Forbidden. Support tier does not exist`;
-            res.status(403).send();
+            res.status(404).send();
             return;
         }
 
@@ -117,7 +117,7 @@ const addSupporter = async (req: Request, res: Response): Promise<void> => {
         const currentDate = new Date();
         const formattedDate = formatDate(currentDate);
 
-        createSupporter(parseInt(petitionId, 10), parseInt(supportTierId, 10), currentUserId, message, formattedDate)
+        await createSupporter(parseInt(petitionId, 10), parseInt(supportTierId, 10), currentUserId, message, formattedDate)
         res.statusMessage = "Supporter has been added";
         res.status(201).send();
         return;
