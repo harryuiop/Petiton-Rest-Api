@@ -5,6 +5,7 @@ import Logger from './config/logger'
 const app = express();
 const port = process.env.PORT || 4941;
 
+
 // Connect to MySQL on start
 async function main() {
     try {
