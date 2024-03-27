@@ -142,8 +142,8 @@ const getPetitionFromPetitionId = async (petitionId: number):Promise<any> => {
                u.last_name AS ownerLastName,
                COUNT(DISTINCT s.user_id) AS numberOfSupporters,
                p.creation_date AS creationDate,
-               p.description,
-               COALESCE(SUM(st.cost), 0) AS moneyRaised
+               p.description
+--                SUM(st.cost) AS moneyRaised
         FROM petition p
         LEFT JOIN supporter s ON p.id = s.petition_id
         LEFT JOIN user u ON p.owner_id = u.id
@@ -237,7 +237,18 @@ const deletePetitions = async (petitionId: number): Promise<void> => {
     return;
 }
 
-export { deletePetitions, checkIfPetitionHasSupporter, checkAuthorized, getAllPetitionInfo, petitonAuthTable, editPetitionM, getAllCategory, checkPetitionIdValid, getSupportTiersFromPetitionId, getPetitionFromPetitionId, getAllPetitionFromSearchUnfilterd, getAllTitlesOfTier, checkTitleUnique, getFullPetitionSupportTable, createPetition, getIdFromAuthToken, createSupportTier, checkCategoryValid }
+const getPetitionMoneyRaised = async (petitionId: number): Promise<any> => {
+    Logger.info(`Deleting Petition ${petitionId}`);
+
+    const conn = await getPool().getConnection();
+    const query = `select sum(cost) as moneyRaised
+                                                from supporter RIGHT JOIN support_tier ON supporter.support_tier_id = support_tier.id WHERE supporter.petition_id = ?`;
+    const [ rows ] = await conn.query( query, [ petitionId ] );
+    await conn.release();
+    return rows;
+}
+
+export { getPetitionMoneyRaised, deletePetitions, checkIfPetitionHasSupporter, checkAuthorized, getAllPetitionInfo, petitonAuthTable, editPetitionM, getAllCategory, checkPetitionIdValid, getSupportTiersFromPetitionId, getPetitionFromPetitionId, getAllPetitionFromSearchUnfilterd, getAllTitlesOfTier, checkTitleUnique, getFullPetitionSupportTable, createPetition, getIdFromAuthToken, createSupportTier, checkCategoryValid }
 
 
 

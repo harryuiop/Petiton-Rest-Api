@@ -15,7 +15,13 @@ import {
     getSupportTiersFromPetitionId,
     checkPetitionIdValid,
     getAllCategory,
-    editPetitionM, petitonAuthTable, getAllPetitionInfo, checkAuthorized, checkIfPetitionHasSupporter, deletePetitions
+    editPetitionM,
+    petitonAuthTable,
+    getAllPetitionInfo,
+    checkAuthorized,
+    checkIfPetitionHasSupporter,
+    deletePetitions,
+    getPetitionMoneyRaised
 } from "../models/petition.model";
 import {getUserAuthToken} from "../models/user.model";
 import logger from "../../config/logger";
@@ -38,28 +44,28 @@ const getAllPetitions = async (req: Request, res: Response): Promise<void> => {
         }
 
         // All valid types of sortBy
-        const sortByTypes = ["ALPHABETICAL_ASC", "ALPHABETICAL_DESC", "COST_ASC", "COST_DESC","CREATED_DESC"]
+        const sortByTypes = ["ALPHABETICAL_ASC", "ALPHABETICAL_DESC", "COST_ASC", "COST_DESC","CREATED_DESC", "CREATED_ASC"]
 
         // Retrieve all the parameters
         const parameters = req.query as searchParameters;
 
         // Checks if parameter q is a valid string
         if (parameters.q === "") {
-            res.statusMessage = "test"
+            res.statusMessage = "q must be a valid string"
             res.status(400).send();
             return;
         }
 
         // Checks if parameter sortBy is valid
         if (parameters.sortBy !== undefined && !(sortByTypes.includes(parameters.sortBy))) {
-            res.statusMessage = "test"
+            res.statusMessage = "SortBy is invalid"
             res.status(400).send();
             return;
         }
 
         // Checks if parameter supporterID is NaN
         if (parameters.supporterId !== undefined && isNaN(parseInt(parameters.supporterId,10))) {
-            res.statusMessage = "test"
+            res.statusMessage = "SupportID must be a number"
             res.status(400).send();
             return;
         }
@@ -69,6 +75,19 @@ const getAllPetitions = async (req: Request, res: Response): Promise<void> => {
 
         // Retrieve the supporters table
         const recieveEnitreSupporterPetition = await getFullPetitionSupportTable();
+
+        // Make sure category id is valid
+        const getAllCategoryTable = await getAllCategory();
+        if (parameters.categoryIds !== undefined) {
+            const isIdInArray = getAllCategoryTable.some((obj: {
+                categoryId: number;
+            }) => obj.categoryId === parseInt(parameters.categoryIds, 10));
+            if (isIdInArray === false) {
+                res.statusMessage = "Category is not valid"
+                res.status(400).send();
+                return;
+            }
+        }
 
         // Grabs all the petitions for a specified supporter
         let petitionsSupportedByUser: number[] = []
@@ -126,10 +145,10 @@ const getAllPetitions = async (req: Request, res: Response): Promise<void> => {
         const numberOfMatchedQuerys = filteredTable.length;
 
         // Slice the front of the list to find the first value according to the start index
-        if (parameters.startIndex !== undefined) {
+        if (parameters.startIndex !== undefined && parseInt(parameters.startIndex, 10) > 1) {
             filteredTable = filteredTable.slice(parseInt(parameters.startIndex as string, 10), -1)
 
-        // Slice the back of the list to find the last value according to the count
+            // Slice the back of the list to find the last value according to the count
         }
         if (parameters.count !== undefined) {
             filteredTable = filteredTable.slice(0, parseInt(parameters.count as string, 10))
@@ -161,6 +180,8 @@ const getAllPetitions = async (req: Request, res: Response): Promise<void> => {
     }
 }
 
+
+
 const getPetition = async (req: Request, res: Response): Promise<void> => {
     try {
         const petitionId = parseInt(req.params.id, 10);
@@ -175,6 +196,8 @@ const getPetition = async (req: Request, res: Response): Promise<void> => {
         const petitionDetails = await getPetitionFromPetitionId(petitionId);
 
         const supportTiers = await getSupportTiersFromPetitionId(petitionId);
+
+        const moneyRaisedTable = await getPetitionMoneyRaised(petitionId);
 
         const formattedSupportTiers = supportTiers.map((tier: any) => ({
             title: tier.title,
@@ -193,7 +216,7 @@ const getPetition = async (req: Request, res: Response): Promise<void> => {
             numberOfSupporters: petitionDetails[0].numberOfSupporters,
             creationDate: petitionDetails[0].creationDate,
             description: petitionDetails[0].description,
-            moneyRaised: petitionDetails[0].moneyRaised,
+            moneyRaised: moneyRaisedTable[0].moneyRaised,
             supportTiers: formattedSupportTiers
         };
 

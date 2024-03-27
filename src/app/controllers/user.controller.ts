@@ -117,17 +117,17 @@ const login = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        // Check if email already exists within the database
-        if (await checkIfEmailExists(email)) {
-            res.statusMessage = "Email does not exists";
-            res.status(401).send();
-            return;
-        }
-
         // Validate the emails syntactically correct
         if (isValidEmail(email) === false) {
             res.statusMessage = "Email is not syntactically correct";
             res.status(400).send();
+            return;
+        }
+
+        // Check if email already exists within the database
+        if (await checkIfEmailExists(email)) {
+            res.statusMessage = "Email does not exists";
+            res.status(401).send();
             return;
         }
 
@@ -216,7 +216,8 @@ const view = async (req: Request, res: Response): Promise<void> => {
 
         // Check if result finds a user
         if (result.length === 0) {
-            res.status(404).send('User not found');
+            res.statusMessage = 'User not found';
+            res.status(404).send();
             return
         }
 
