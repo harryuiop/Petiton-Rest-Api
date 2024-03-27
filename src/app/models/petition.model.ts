@@ -75,6 +75,16 @@ const checkPetitionIdValid = async (petitionId: number): Promise<boolean> => {
     return rows.length === 0;
 }
 
+const checkSupportTierIdValid = async (supportId: number): Promise<boolean> => {
+    Logger.info(`Checking if the petitionId is valid`);
+
+    const conn = await getPool().getConnection();
+    const query = 'SELECT id FROM support_tier WHERE id = ?'
+    const [ rows ] = await conn.query( query, [ supportId ] );
+    await conn.release();
+    return rows.length === 0;
+}
+
 const checkTitleUnique = async (title: string):Promise<boolean> => {
     Logger.info(`Checking if the title in unique`);
 
@@ -248,7 +258,7 @@ const getPetitionMoneyRaised = async (petitionId: number): Promise<any> => {
     return rows;
 }
 
-export { getPetitionMoneyRaised, deletePetitions, checkIfPetitionHasSupporter, checkAuthorized, getAllPetitionInfo, petitonAuthTable, editPetitionM, getAllCategory, checkPetitionIdValid, getSupportTiersFromPetitionId, getPetitionFromPetitionId, getAllPetitionFromSearchUnfilterd, getAllTitlesOfTier, checkTitleUnique, getFullPetitionSupportTable, createPetition, getIdFromAuthToken, createSupportTier, checkCategoryValid }
+export { checkSupportTierIdValid, getPetitionMoneyRaised, deletePetitions, checkIfPetitionHasSupporter, checkAuthorized, getAllPetitionInfo, petitonAuthTable, editPetitionM, getAllCategory, checkPetitionIdValid, getSupportTiersFromPetitionId, getPetitionFromPetitionId, getAllPetitionFromSearchUnfilterd, getAllTitlesOfTier, checkTitleUnique, getFullPetitionSupportTable, createPetition, getIdFromAuthToken, createSupportTier, checkCategoryValid }
 
 
 

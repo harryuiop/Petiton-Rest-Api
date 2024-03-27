@@ -76,27 +76,25 @@ const getAllPetitions = async (req: Request, res: Response): Promise<void> => {
         // Retrieve the supporters table
         const recieveEnitreSupporterPetition = await getFullPetitionSupportTable();
 
-        // Make sure category id is valid
-        // let splitIds: string[] | string[][];
-        //
-        // if (Array.isArray(parameters.categoryIds)) {
-        //     // If it's an array, split each element by comma
-        //     splitIds = parameters.categoryIds.map(id => id.split(','));
-        // } else if (typeof parameters.categoryIds === 'string') {
-        //     // If it's a string, leave it as is
-        //     splitIds = [parameters.categoryIds];
-        // } else {
-        //     // Handle any other case by setting an empty array
-        //     splitIds = [];
-        // }
+        interface Category {
+            categoryId: number;
+            name: string;
+        }
 
-        const getAllCategoryTable = await getAllCategory();
-        if (parameters.categoryIds !== undefined) {
-            const isIdInArray = getAllCategoryTable.some((obj: {
-                categoryId: number;
-            }) => obj.categoryId === parseInt(parameters.categoryIds, 10));
-            if (isIdInArray === false) {
-                res.statusMessage = "Category is not valid"
+        const getAllCategoryTable: Category[] = await getAllCategory();
+        const providedCategoryIds: string | string[] = parameters.categoryIds;
+
+        if (providedCategoryIds !== undefined) {
+            const categoryIds = Array.isArray(providedCategoryIds)
+                ? providedCategoryIds.flatMap(id => id.split(',').map(Number))
+                : [Number(providedCategoryIds)];
+
+            const isValidCategoryIds = categoryIds.every(id =>
+                getAllCategoryTable.some(category => category.categoryId === id)
+            );
+
+            if (!isValidCategoryIds) {
+                res.statusMessage = "Category is not valid";
                 res.status(400).send();
                 return;
             }
@@ -198,6 +196,13 @@ const getAllPetitions = async (req: Request, res: Response): Promise<void> => {
 const getPetition = async (req: Request, res: Response): Promise<void> => {
     try {
         const petitionId = parseInt(req.params.id, 10);
+
+        // Check if user ID is a number
+        if (isNaN(petitionId)) {
+            res.statusMessage = "Not a valid petition ID";
+            res.status(400).send()
+            return;
+        }
 
         // No petition with that ID
         if (await checkPetitionIdValid(petitionId)) {
@@ -443,6 +448,13 @@ const deletePetition = async (req: Request, res: Response): Promise<void> => {
     try{
         const petitionId = req.params.id;
         const authToken = req.header('X-Authorization');
+
+        // Check if user ID is a number
+        if (isNaN(Number(petitionId))) {
+            res.statusMessage = "Not a valid petition ID";
+            res.status(400).send()
+            return;
+        }
 
         if (await checkPetitionIdValid(parseInt(petitionId, 10))) {
             res.statusMessage = "Not Found. No petition with id";

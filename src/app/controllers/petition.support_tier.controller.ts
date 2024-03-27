@@ -1,7 +1,7 @@
 import {Request, Response} from "express";
 import Logger from "../../config/logger";
 import {
-    checkAuthorized, checkIfPetitionHasSupporter,
+    checkAuthorized, checkIfPetitionHasSupporter, checkPetitionIdValid, checkSupportTierIdValid,
     checkTitleUnique, createSupportTier, getAllTitlesOfTier,
     getSupportTiersFromPetitionId,
     petitonAuthTable
@@ -135,6 +135,25 @@ const editSupportTier = async (req: Request, res: Response): Promise<void> => {
             res.statusMessage = `Petition ID must be a number`;
             res.status(400).send();
             return;
+        }
+
+        // Check if tier ID is a number
+        if (isNaN(Number(tierId))) {
+            res.statusMessage = "Not a valid petition ID";
+            res.status(400).send()
+            return;
+        }
+
+        if (await checkPetitionIdValid(parseInt(petitionId, 10))) {
+            res.statusMessage = "Petition does not exist";
+            res.status(400).send();
+            return
+        }
+
+        if (await checkSupportTierIdValid(parseInt(tierId, 10))) {
+            res.statusMessage = "Support tier does not exist";
+            res.status(400).send();
+            return
         }
 
         // Check the owner of the given petition
