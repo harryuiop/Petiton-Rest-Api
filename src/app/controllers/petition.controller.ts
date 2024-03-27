@@ -200,6 +200,7 @@ const getPetition = async (req: Request, res: Response): Promise<void> => {
         res.statusMessage = "Petition found";
         res.status(200).json(formattedResult);
     } catch (err) {
+
         Logger.error(err);
         res.statusMessage = "Internal Server Error";
         res.status(500).send();
@@ -389,6 +390,12 @@ const editPetition = async (req: Request, res: Response): Promise<void> => {
         res.status(200).send();
         return;
     } catch (err) {
+        if (err.code === "ER_DUP_ENTRY") {
+            res.statusMessage = "Email Already in Use";
+            res.status(403).send();
+            return;
+        }
+
         Logger.error(err);
         res.statusMessage = "Internal Server Error";
         res.status(500).send();

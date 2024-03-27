@@ -117,6 +117,13 @@ const login = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
+        // Check if email already exists within the database
+        if (await checkIfEmailExists(email)) {
+            res.statusMessage = "Email does not exists";
+            res.status(401).send();
+            return;
+        }
+
         // Validate the emails syntactically correct
         if (isValidEmail(email) === false) {
             res.statusMessage = "Email is not syntactically correct";
@@ -269,14 +276,14 @@ const update = async (req: Request, res: Response): Promise<void> => {
         const tokenFromId = await getUserAuthToken(userId)
 
         // Check that the token from the id matches the token in the params
-        if (idFromToken[0].id !== userId) {
+        if (idFromToken.length > 0 && idFromToken[0].id !== userId) {
             res.statusMessage = "Forbidden. Can not edit another user's information";
             res.status(403).send();
             return;
         }
 
         // Check there exists a user to match the authentication token
-        if (idFromToken[0].id === undefined) {
+        if (idFromToken.length === 0) {
             res.statusMessage = "User not authenticated. No user to match header auth token";
             res.status(401).send();
             return;

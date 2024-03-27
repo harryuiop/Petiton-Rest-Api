@@ -104,6 +104,7 @@ const createSupportTier = async (petitionId: number, title: string, description:
     const query = `INSERT INTO support_tier
                                              (petition_id, title, description, cost)
                                             VALUES ( ?, ?, ?, ? )`;
+
     const [ rows ] = await conn.query( query, [ petitionId, title, description, cost ] );
     await conn.release();
     return rows;

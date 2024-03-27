@@ -15,6 +15,7 @@ import {
     updateSupportTier
 } from "../models/supportTiers.model";
 import {checkSupporterTierExists} from "../models/petition.supporter.model";
+import {getUserAuthToken, getUserIdFromAuthToken} from "../models/user.model";
 
 const addSupportTier = async (req: Request, res: Response): Promise<void> => {
     try{
@@ -38,6 +39,13 @@ const addSupportTier = async (req: Request, res: Response): Promise<void> => {
         // Check petitionId is a number
         if (isNaN(Number(petitionId))) {
             res.statusMessage = `Petition ID must be a number`;
+            res.status(400).send();
+            return;
+        }
+
+        // Check cost is a number
+        if (isNaN(Number(cost))) {
+            res.statusMessage = `Cost must be a number`;
             res.status(400).send();
             return;
         }
@@ -84,11 +92,17 @@ const addSupportTier = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        createSupportTier(parseInt(petitionId, 10), title, description, parseInt(cost, 10));
+        await createSupportTier(parseInt(petitionId, 10), title, description, parseInt(cost, 10));
         res.statusMessage = "Support tier created";
         res.status(201).send();
         return;
     } catch (err) {
+        if (err.code === "ER_DUP_ENTRY") {
+            res.statusMessage = "Email Already in Use";
+            res.status(403).send();
+            return;
+        }
+
         Logger.error(err);
         res.statusMessage = "Internal Server Error";
         res.status(500).send();
@@ -123,14 +137,6 @@ const editSupportTier = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        // Check if the petition exists
-        const petitionFound = await checkPetitionExists(parseInt(petitionId, 10))
-        if (petitionFound.length === 0) {
-            res.statusMessage = "Petition not found";
-            res.status(404).send();
-            return;
-        }
-
         // Check the owner of the given petition
         const petitonAuthTableR = await petitonAuthTable(parseInt(petitionId, 10));
         const authRow = petitonAuthTableR.filter((row: any) => row.petitionId === parseInt(petitionId, 10));
@@ -146,6 +152,14 @@ const editSupportTier = async (req: Request, res: Response): Promise<void> => {
         if (authToken !== authRow[0].auth_token) {
             res.statusMessage = `Forbidden. Only the owner of a petition may change it`;
             res.status(403).send();
+            return;
+        }
+
+        // Check if the petition exists
+        const petitionFound = await checkPetitionExists(parseInt(petitionId, 10))
+        if (petitionFound.length === 0) {
+            res.statusMessage = "Petition not found";
+            res.status(404).send();
             return;
         }
 
@@ -188,6 +202,12 @@ const editSupportTier = async (req: Request, res: Response): Promise<void> => {
         res.status(200).send();
         return;
     } catch (err) {
+        if (err.code === "ER_DUP_ENTRY") {
+            res.statusMessage = "Email Already in Use";
+            res.status(403).send();
+            return;
+        }
+
         Logger.error(err);
         res.statusMessage = "Internal Server Error";
         res.status(500).send();

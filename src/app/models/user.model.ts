@@ -46,7 +46,7 @@ const alterUserWithoutPassword = async (email: string, first_name: string, last_
     Logger.info(`Updating user ${userid} in the database`);
 
     const conn = await getPool().getConnection();
-    const query = 'update user set email = ?, first_name = ?, last_name = ?, where id = ?';
+    const query = 'update user set email = ?, first_name = ?, last_name = ? where id = ?';
     const [ rows ] = await conn.query( query, [ email, first_name, last_name, userid ]);
     return rows;
 }
