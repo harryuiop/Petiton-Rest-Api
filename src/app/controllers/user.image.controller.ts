@@ -6,11 +6,9 @@ import {
     getProfileImageFileNameFromId, removeUserProfileImage,
     updateUserProfileImage
 } from "../models/user.image.model";
-import {getOne, getUserAuthToken} from "../models/user.model";
-import fs from 'fs';
+import {getOne, getUserAuthToken, getUserIdFromAuthToken} from "../models/user.model";
+import fs from 'mz/fs';
 import mime from "mime";
-import {lookup} from "mz/dns";
-import {checkAuthorized} from "../models/petition.model";
 
 
 const getImage = async (req: Request, res: Response): Promise<void> => {
@@ -35,6 +33,7 @@ const getImage = async (req: Request, res: Response): Promise<void> => {
 
         // Get the file name for the profile photo
         const filename = await getProfileImageFileNameFromId(userId);
+        // const fileExt = filename.split('.').pop();
 
         // If user does not have an image
         if (filename[0].image_filename === null) {
@@ -48,8 +47,8 @@ const getImage = async (req: Request, res: Response): Promise<void> => {
         const fileTypeToSend : string = mime.lookup(filename[0].image_filename);
         res.contentType(fileTypeToSend);
 
-        res.sendFile(`/storage/images/${filename}`)
-        res.status(200).send();
+        res.status(200).send(await fs.readFile(`storage/images/${filename[0].image_filename}`));
+        // res.status(200).send();
         return;
     } catch (err) {
         Logger.error(err);
@@ -80,8 +79,13 @@ const setImage = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        // TODO: Check user isn't trying to change another users image
-
+        // Check that the token from the id matches the token in the params
+        const idFromToken = await getUserIdFromAuthToken(authToken);
+        if (idFromToken.length > 0 && idFromToken[0].id !== userId) {
+            res.statusMessage = "Forbidden. Can not edit another user's information";
+            res.status(403).send();
+            return;
+        }
 
         // Determine the content type based on the file extension
         let contentType: string;

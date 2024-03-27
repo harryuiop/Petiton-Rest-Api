@@ -5,8 +5,8 @@ import * as model from "../models/user.model";
 import {compare, generateToken, hash, isValidEmail} from "../services/passwords";
 import * as schemas from '../resources/schemas.json'
 import {
-    alterUserWithoutPassword,
-    checkIfEmailExists,
+    alterUserWithoutPassword, checkEmailFromToken,
+    checkIfEmailExists, checkTokenExists,
     getHashedPasswordFromEmail,
     getOne,
     getPasswordFromId,
@@ -177,6 +177,14 @@ const logout = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
+        // Check for unknown token
+        const tokenInDatabase = await checkTokenExists(authToken);
+        if (tokenInDatabase === null) {
+            res.statusMessage = `Unknown token provided`;
+            res.status(401).send();
+            return;
+        }
+
         // Remove auth token from the database
         await removeUserAuthToken(authToken);
         res.statusMessage = `User has been logged out`;
@@ -304,25 +312,36 @@ const update = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
+        if (password !== undefined) {
+            // check current password and new password from the params are not the same
+            if (password === currentPassword) {
+                res.statusMessage = "current password should not be the same as new password"
+                res.status(403).send();
+                return;
+            }
+        }
+
         // Grab logged-in users details
         const user = await getOne(userId);
-        const emailCurrent = user[0].email;
-        const firstNameCurrent = user[0].first_name;
-        const lastNameCurrent = user[0].last_name;
+        let emailCurrent = user[0].email;
+        let firstNameCurrent = user[0].first_name;
+        let lastNameCurrent = user[0].last_name;
 
         // Update email if not null
         if (email !== undefined) {
 
+            // Check if  email parameter is the current users (checkEmailFromToken returns null or the email)
+            const usersCurrentEmail = await checkEmailFromToken(authToken);
+
             // Check if email already exists within the database
-            if (!await checkIfEmailExists(email)) {
+            if (!await checkIfEmailExists(email) && usersCurrentEmail !== email) {
                 res.statusMessage = "Forbidden. Email is already in use";
                 res.status(403).send();
                 return;
             }
 
-            const result = alterUserWithoutPassword(email, firstNameCurrent, lastNameCurrent, userId);
-            res.status(200).send();
-            return;
+            await alterUserWithoutPassword(email, firstNameCurrent, lastNameCurrent, userId);
+            emailCurrent = email;
         }
 
         // Update email if not null
@@ -334,9 +353,8 @@ const update = async (req: Request, res: Response): Promise<void> => {
                 return;
             }
 
-            const result = alterUserWithoutPassword(emailCurrent, firstName, lastNameCurrent, userId);
-            res.status(200).send();
-            return;
+            await alterUserWithoutPassword(emailCurrent, firstName, lastNameCurrent, userId);
+            firstNameCurrent = firstName;
         }
 
         // Update email if not null
@@ -348,13 +366,19 @@ const update = async (req: Request, res: Response): Promise<void> => {
                 return;
             }
 
-            const result = alterUserWithoutPassword(emailCurrent, firstNameCurrent, lastName, userId);
-            res.status(200).send();
-            return;
+            await alterUserWithoutPassword(emailCurrent, firstNameCurrent, lastName, userId);
+            lastNameCurrent = lastName;
         }
 
         // Update Password if not null
         if (password !== undefined) {
+
+            // if password is defined the user must provide their current password
+            if (currentPassword === undefined) {
+                res.statusMessage = "you must provide you current password to change you password";
+                res.status(400).send()
+                return;
+            }
 
             // Check The currentPassword must match the users existing password.
             const hashedPassword = await getPasswordFromId(userId);
@@ -381,12 +405,11 @@ const update = async (req: Request, res: Response): Promise<void> => {
 
             // Hash new password
             const newHashedPassword = await hash(password);
-            const result = updatePassword(userId, newHashedPassword);
-
-            res.statusMessage = "Password has been updated";
-            res.status(200).send();
-            return;
+            await updatePassword(userId, newHashedPassword);
         }
+
+        res.status(200).send();
+        return;
 
     } catch (err) {
         Logger.error(err);

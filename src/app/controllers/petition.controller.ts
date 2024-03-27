@@ -77,6 +77,19 @@ const getAllPetitions = async (req: Request, res: Response): Promise<void> => {
         const recieveEnitreSupporterPetition = await getFullPetitionSupportTable();
 
         // Make sure category id is valid
+        // let splitIds: string[] | string[][];
+        //
+        // if (Array.isArray(parameters.categoryIds)) {
+        //     // If it's an array, split each element by comma
+        //     splitIds = parameters.categoryIds.map(id => id.split(','));
+        // } else if (typeof parameters.categoryIds === 'string') {
+        //     // If it's a string, leave it as is
+        //     splitIds = [parameters.categoryIds];
+        // } else {
+        //     // Handle any other case by setting an empty array
+        //     splitIds = [];
+        // }
+
         const getAllCategoryTable = await getAllCategory();
         if (parameters.categoryIds !== undefined) {
             const isIdInArray = getAllCategoryTable.some((obj: {
@@ -216,7 +229,7 @@ const getPetition = async (req: Request, res: Response): Promise<void> => {
             numberOfSupporters: petitionDetails[0].numberOfSupporters,
             creationDate: petitionDetails[0].creationDate,
             description: petitionDetails[0].description,
-            moneyRaised: moneyRaisedTable[0].moneyRaised,
+            moneyRaised: parseInt(moneyRaisedTable[0].moneyRaised, 10),
             supportTiers: formattedSupportTiers
         };
 
