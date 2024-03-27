@@ -39,7 +39,7 @@ const checkIfEmailExists = async (email: string): Promise<boolean> => {
     const query = 'select email from user where email = ?'
     const [ rows ] = await conn.query( query, [ email ]);
 
-    return rows;
+    return rows.length === 0;
     }
 
 const alterUserWithoutPassword = async (email: string, first_name: string, last_name: string, userid: number): Promise<ResultSetHeader> => {
@@ -105,6 +105,16 @@ const removeUserAuthToken = async (token: string): Promise<any> => {
     return rows;
 }
 
+const getUserIdFromAuthToken = async (token: string):Promise<any> => {
+    Logger.info(`Getting id from user auth token ${token}`);
+
+    const conn = await getPool().getConnection();
+    const query = 'select id from user where auth_token = ?';
+    const [ rows ] = await conn.query( query, [ token ]);
+    return rows;
+}
+
 export { removeUserAuthToken, updatePassword, registerUser, getOne, getHashedPasswordFromEmail,
-    checkIfEmailExists, alterUserWithoutPassword, getPasswordFromId, updateUserToken, getUserIdAndTokenFromEmail, getUserAuthToken }
+    checkIfEmailExists, alterUserWithoutPassword, getPasswordFromId, updateUserToken, getUserIdAndTokenFromEmail,
+    getUserAuthToken, getUserIdFromAuthToken }
 

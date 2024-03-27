@@ -3,6 +3,7 @@ import Logger from '../../config/logger';
 import * as User from '../models/user.model'
 import * as model from "../models/user.model";
 import {compare, generateToken, hash, isValidEmail} from "../services/passwords";
+import * as schemas from '../resources/schemas.json'
 import {
     alterUserWithoutPassword,
     checkIfEmailExists,
@@ -10,14 +11,25 @@ import {
     getOne,
     getPasswordFromId,
     getUserAuthToken,
-    getUserIdAndTokenFromEmail,
+    getUserIdAndTokenFromEmail, getUserIdFromAuthToken,
     removeUserAuthToken,
     updatePassword,
     updateUserToken
 } from "../models/user.model";
+import {validate} from "../services/validate";
 
 const register = async (req: Request, res: Response): Promise<void> => {
     try{
+        // Validate data
+        const validation = await validate(
+            schemas.user_register,
+            req.body);
+        if (validation !== true) {
+            res.statusMessage = `Bad Request: ${validation.toString()}`;
+            res.status(400).send();
+            return;
+        }
+
         // Grab all the user details
         const email = req.body.email;
         const firstName = req.body.firstName;
@@ -26,7 +38,7 @@ const register = async (req: Request, res: Response): Promise<void> => {
 
         // Check none of the fields are empty
         if (email === "" || firstName === "" || lastName === "" || password === "") {
-            res.statusMessage = "No field can be empty";
+            res.statusMessage = "No field can not be empty";
             res.status(400).send();
             return;
         }
@@ -42,7 +54,11 @@ const register = async (req: Request, res: Response): Promise<void> => {
         }
 
         // Check if email already exists within the database
-        checkIfEmailExists(email)
+        if (!await checkIfEmailExists(email)) {
+            res.statusMessage = "Forbidden. Email is already in use";
+            res.status(403).send();
+            return;
+        }
 
         // Validate the password is of at least size 6
         if (password.length < 6) {
@@ -78,14 +94,45 @@ const register = async (req: Request, res: Response): Promise<void> => {
 
 const login = async (req: Request, res: Response): Promise<void> => {
     try{
+        // Validate data
+        const validation = await validate(
+            schemas.user_login,
+            req.body);
+        if (validation !== true) {
+            res.statusMessage = `Bad Request: ${validation.toString()}`;
+            res.status(400).send();
+            return;
+        }
+
         // Grab email and password
         const email = req.body.email;
         const password = req.body.password;
+
+        // Check none of the fields are empty
+        if (email === "" || password === "") {
+            res.statusMessage = "No field can be empty";
+            res.status(400).send();
+            return;
+        }
+
+        // Validate the emails syntactically correct
+        if (isValidEmail(email) === false) {
+            res.statusMessage = "Email is not syntactically correct";
+            res.status(400).send();
+            return;
+        }
+
+        // Validate the password is of at least size 6
+        if (password.length < 6) {
+            res.status(400).send();
+            return;
+        }
 
         // Grab hashed password from user and perform a check to see if its matches
         const hashedPassword = await getHashedPasswordFromEmail(email);
         const extractedHashedPassword = hashedPassword[0].password;
         if (await compare(password, extractedHashedPassword) === false) {
+            res.statusMessage = "UnAuthorized. Incorrect email/password";
             res.status(401).send();
             return;
         }
@@ -114,8 +161,6 @@ const logout = async (req: Request, res: Response): Promise<void> => {
     try{
         const authToken = req.header('X-Authorization');
 
-        // Todo: auth token already removed edge case ( exists in another user )
-
         // Check if a user is logged in
         if (authToken === undefined) {
             res.statusMessage = `Unauthorized. Cannot log out if you are not authenticated`;
@@ -124,7 +169,7 @@ const logout = async (req: Request, res: Response): Promise<void> => {
         }
 
         // Remove auth token from the database
-        const result = await removeUserAuthToken(authToken);
+        await removeUserAuthToken(authToken);
         res.statusMessage = `User has been logged out`;
         res.status(200).send();
         return;
@@ -139,10 +184,18 @@ const logout = async (req: Request, res: Response): Promise<void> => {
 
 const view = async (req: Request, res: Response): Promise<void> => {
     Logger.http(`GET single user id: ${req.params.id}`);
+
     const userId = req.params.id;
     const authToken = req.header('X-Authorization');
 
     try{
+        // Check none of the fields are empty
+        if (userId === "") {
+            res.statusMessage = "UserID field can not be empty";
+            res.status(400).send();
+            return;
+        }
+
         // Check if the user ID is a valid number
         if (isNaN(Number(userId))) {
             res.statusMessage = "Not a valid user ID";
@@ -183,6 +236,16 @@ const view = async (req: Request, res: Response): Promise<void> => {
 
 const update = async (req: Request, res: Response): Promise<void> => {
     try {
+        // Validate data
+        const validation = await validate(
+            schemas.user_edit,
+            req.body);
+        if (validation !== true) {
+            res.statusMessage = `Bad Request: ${validation.toString()}`;
+            res.status(400).send();
+            return;
+        }
+
         // Grab all the user details
         const email = req.body.email;
         const firstName = req.body.firstName;
@@ -199,11 +262,35 @@ const update = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        // Check that the user trying to update data is authenticated
-        const token = await getUserAuthToken(userId);
-        if (token[0].auth_token !== authToken) {
+        // Grab verification details
+        const idFromToken = await getUserIdFromAuthToken(authToken);
+        const tokenFromId = await getUserAuthToken(userId)
+
+        // Check that the token from the id matches the token in the params
+        if (idFromToken[0].id !== userId) {
+            res.statusMessage = "Forbidden. Can not edit another user's information";
+            res.status(403).send();
+            return;
+        }
+
+        // Check there exists a user to match the authentication token
+        if (idFromToken[0].id === undefined) {
+            res.statusMessage = "User not authenticated. No user to match header auth token";
+            res.status(401).send();
+            return;
+        }
+
+        //
+        if (tokenFromId[0].auth_token === null || tokenFromId[0].auth_token !== authToken) {
             res.statusMessage = "User not authenticated";
             res.status(401).send();
+            return;
+        }
+
+        // Validate the emails syntactically correct
+        if (email !== undefined && isValidEmail(email) === false) {
+            res.statusMessage = "Email is not syntactically correct";
+            res.status(400).send();
             return;
         }
 
@@ -216,15 +303,12 @@ const update = async (req: Request, res: Response): Promise<void> => {
         // Update email if not null
         if (email !== undefined) {
 
-            // Check the syntax of provided email
-            if (isValidEmail(email) === false && email !== undefined) {
-                res.statusMessage = "Email syntax incorrect";
-                res.status(400).send()
+            // Check if email already exists within the database
+            if (!await checkIfEmailExists(email)) {
+                res.statusMessage = "Forbidden. Email is already in use";
+                res.status(403).send();
                 return;
             }
-
-            // Check if email already exists within the database
-            checkIfEmailExists(email);
 
             const result = alterUserWithoutPassword(email, firstNameCurrent, lastNameCurrent, userId);
             res.status(200).send();
