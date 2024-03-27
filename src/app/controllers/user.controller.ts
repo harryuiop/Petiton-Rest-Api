@@ -94,6 +94,8 @@ const register = async (req: Request, res: Response): Promise<void> => {
 
 const login = async (req: Request, res: Response): Promise<void> => {
     try{
+        // ToDo: check if user is already logged in
+
         // Validate data
         const validation = await validate(
             schemas.user_login,
@@ -280,7 +282,7 @@ const update = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        //
+        // Checks if the given user has a token
         if (tokenFromId[0].auth_token === null || tokenFromId[0].auth_token !== authToken) {
             res.statusMessage = "User not authenticated";
             res.status(401).send();
