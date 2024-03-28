@@ -95,7 +95,6 @@ const addSupporter = async (req: Request, res: Response): Promise<void> => {
         const petitonAuthTableR = await petitonAuthTable(parseInt(petitionId, 10));
         const authRow = petitonAuthTableR.filter((row: any) => row.petitionId === parseInt(petitionId, 10));
 
-        // ToDo: Manual Test
         // Checks the authentication token against the owner of the petitions authentication token
         if (authToken === authRow[0].auth_token) {
             res.statusMessage = `Forbidden. Cannot support your own petition`;
@@ -122,7 +121,6 @@ const addSupporter = async (req: Request, res: Response): Promise<void> => {
         res.status(201).send();
         return;
     } catch (err) {
-        // ToDo: add these dups
         if (err.code === "ER_DUP_ENTRY") {
             res.statusMessage = "Petition Duplication";
             res.status(400).send();

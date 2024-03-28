@@ -159,7 +159,8 @@ const getPetitionFromPetitionId = async (petitionId: number):Promise<any> => {
         LEFT JOIN user u ON p.owner_id = u.id
         LEFT JOIN support_tier st ON p.id = st.petition_id
         WHERE p.id = ?
-        GROUP BY p.id`;
+        GROUP BY p.id
+        ORDER BY p.id`;
 
     const [ rows ] = await conn.query( query, [ petitionId ] );
     await conn.release();

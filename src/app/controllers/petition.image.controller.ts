@@ -1,14 +1,9 @@
 import {Request, Response} from "express";
 import Logger from "../../config/logger";
-import fs from 'fs';
+import fs from 'mz/fs';
 import mime from "mime";
 import {checkPetitionIdValid, getPetitionFromPetitionId, petitonAuthTable, checkAuthorized} from "../models/petition.model";
 import {checkPetitonHasProfileImage, getProfileImageFileNameFromPetitionId, updatePetitionProfileImage} from "../models/petition.image.model";
-import {validate} from "../services/validate";
-import * as schemas from '../resources/schemas.json'
-import {checkUserHasProfileImage, updateUserProfileImage} from "../models/user.image.model";
-
-
 
 const getImage = async (req: Request, res: Response): Promise<void> => {
     try{
@@ -41,12 +36,10 @@ const getImage = async (req: Request, res: Response): Promise<void> => {
         }
 
         // Find the file type and update the content-type
-        res.statusMessage = `Sending ${petitionId}'s profile photo`;
         const fileTypeToSend : string = mime.lookup(filename[0].image_filename);
+        res.statusMessage = `Sending ${petitionId}'s profile photo`;
         res.contentType(fileTypeToSend);
-
-        res.sendFile(`/storage/images/${filename}`)
-        res.status(200).send();
+        res.status(200).send(await fs.readFile(`storage/images/${filename[0].image_filename}`));
         return;
     } catch (err) {
         Logger.error(err);
